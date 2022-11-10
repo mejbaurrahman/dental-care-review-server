@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-// const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
@@ -10,23 +10,37 @@ const port = process.env.PORT || 5000;
 // middle wares
 app.use(cors());
 app.use(express.json());
-
-// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.twtll.mongodb.net/?retryWrites=true&w=majority`;
-
-
-
-// const { MongoClient} = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xvker.mongodb.net/?retryWrites=true&w=majority`;
-// const client = new MongoClient(uri);
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+
+function verifyJWT(req, res, next){
+    const authHeader = req.headers.authorization;
+
+    if(!authHeader){
+        return res.status(401).send({message: 'unauthorized access'});
+    }
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function(err, decoded){
+        if(err){
+            return res.status(403).send({message: 'Forbidden access'});
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
 
 async function run (){
     try{
-        // client.connect();
         console.log('Connected successfully');
         const servicesCollection = client.db('dentalCare').collection('services');
         const reviewsCollection = client.db('dentalCare').collection('reviews');
-        
+        app.post('/jwt', (req, res) =>{
+            const user = req.body;
+            console.log(user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h'})
+            res.send({token})
+        }) 
         app.get('/hservices', async (req, res)=>{
             const query = {};
             const cursor = servicesCollection.find(query);
@@ -40,8 +54,13 @@ async function run (){
             const cursor =await servicesCollection.findOne(query);
             res.json(cursor);
         })
-        app.get('/reviews', async (req, res)=>{
-           let query={};
+        app.get('/reviews',verifyJWT, async (req, res)=>{
+           
+            const decoded= req.decoded;
+            if(decoded.email !== req.query.email){
+                res.status(403).send({message: 'unauthorized access'})
+            }
+            let query={};
             const serviceReviews = req.query.serviceId;
             const emailQuery = req.query.email;
             if(serviceReviews){
