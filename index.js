@@ -15,7 +15,6 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 function verifyJWT(req, res, next){
     const authHeader = req.headers.authorization;
-
     if(!authHeader){
         return res.status(401).send({message: 'unauthorized access'});
     }
@@ -38,7 +37,7 @@ async function run (){
         app.post('/jwt', (req, res) =>{
             const user = req.body;
             console.log(user);
-            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h'})
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d'})
             res.send({token})
         }) 
         app.get('/hservices', async (req, res)=>{
@@ -61,18 +60,33 @@ async function run (){
                 res.status(403).send({message: 'unauthorized access'})
             }
             let query={};
-            const serviceReviews = req.query.serviceId;
+            
             const emailQuery = req.query.email;
-            if(serviceReviews){
-                 query = {serviceId: req.query.serviceId};
-            }
+            
             if(emailQuery){
                 query = {email: req.query.email};
             }
             console.log(query);
             const cursor = reviewsCollection.find(query);
             const result = await cursor.toArray();
+            console.log(result);
             res.send(result);
+        })
+
+        app.get('/serviceReviews', async (req, res)=>{
+            let query = {};
+            const serviceR = req.query.serviceId;
+           
+            if(serviceR){
+                query = {
+                    serviceId: req.query.serviceId
+                }
+            }
+            const cursor = reviewsCollection.find(query);
+            const result = await cursor.toArray();
+            // console.log(result);
+            res.send(result);
+
         })
         app.get('/services', async (req, res)=>{
             const query = {};
@@ -82,7 +96,7 @@ async function run (){
         })
         app.post('/services', async(req, res)=>{
             const service = req.body;
-            console.log(service);
+            // console.log(service);
             const result = await servicesCollection.insertOne(service);
             res.json(result)
         })
