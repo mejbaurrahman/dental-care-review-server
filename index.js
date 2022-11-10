@@ -33,7 +33,6 @@ async function run (){
         const reviewsCollection = client.db('dentalCare').collection('reviews');
         app.post('/jwt', (req, res) =>{
             const user = req.body;
-            console.log(user);
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d'})
             res.send({token})
         }) 
@@ -51,22 +50,17 @@ async function run (){
             res.json(cursor);
         })
         app.get('/reviews',verifyJWT, async (req, res)=>{
-           
             const decoded= req.decoded;
             if(decoded.email !== req.query.email){
                 res.status(403).send({message: 'unauthorized access'})
             }
             let query={};
-            
             const emailQuery = req.query.email;
-            
             if(emailQuery){
                 query = {email: req.query.email};
             }
-            console.log(query);
             const cursor = reviewsCollection.find(query);
             const result = await cursor.toArray();
-            console.log(result);
             res.send(result);
         })
 
@@ -126,7 +120,7 @@ async function run (){
 run().catch(()=>console.dir);
 
 app.get('/', (req, res)=>{
-    res.send("Welcome to Mejba's Dental Center");
+    res.send("Welcome to MDC: Mejba's Dental Center");
 })
 
 app.listen(port, ()=>{
